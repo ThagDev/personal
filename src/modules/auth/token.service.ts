@@ -12,11 +12,12 @@ export class TokenService {
     avatar: string,
     roles: string[],
   ) {
+    const isProd = process.env.NODE_ENV === 'production';
     return jwt.sign(
       { _id, email, username, avatar, roles },
       process.env.ACCESS_TOKEN_SECRET,
       {
-        expiresIn: '30m', // Thời gian hết hạn là 15 phút
+        expiresIn: isProd ? '1m' : '15m', // 1 phút ở production, 15 phút ở dev
       },
     );
   }
@@ -34,7 +35,6 @@ export class TokenService {
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
       return decoded;
     } catch (err) {
-      console.log('halo');
       throw new UnauthorizedException('Access token is invalid or expired');
     }
   }

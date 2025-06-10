@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thông tin tài khoản mới</title>
+  <style type="text/css">
+    /* Reset cơ bản để email hiển thị nhất quán */
+    body, table, td, a {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table, td {
+      mso-table-rspace: 0pt;
+      mso-table-lspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #f4f4f4;
+      font-family: Arial, sans-serif;
+      color: #333333;
+    }
+    a {
+      color: #1a82e2;
+      text-decoration: none;
+    }
+
+    /* Container chính */
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .email-header {
+      background-color: #1a82e2;
+      padding: 20px;
+      text-align: center;
+      color: #ffffff;
+    }
+    .email-header h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 28px;
+    }
+
+    /* Nội dung chính */
+    .email-body {
+      padding: 30px 20px;
+      line-height: 1.6;
+      font-size: 16px;
+      color: #555555;
+    }
+    .email-body h2 {
+      font-size: 20px;
+      margin: 0 0 15px;
+      color: #333333;
+    }
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      margin-bottom: 30px;
+    }
+    .info-table th, .info-table td {
+      border: 1px solid #dddddd;
+      padding: 10px;
+      text-align: left;
+      font-size: 14px;
+      color: #444444;
+    }
+    .info-table th {
+      background-color: #f9f9f9;
+      font-weight: 600;
+    }
+
+    /* Button */
+    .btn {
+      display: inline-block;
+      padding: 12px 25px;
+      margin: 0 auto;
+      background-color: #1a82e2;
+      color: #ffffff !important;
+      font-size: 16px;
+      border-radius: 4px;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    /* Footer */
+    .email-footer {
+      background-color: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #777777;
+    }
+    .email-footer p {
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    @media only screen and (max-width: 480px) {
+      .email-body {
+        padding: 20px 10px;
+      }
+      .info-table th, .info-table td {
+        font-size: 12px;
+        padding: 8px;
+      }
+      .btn {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+  </style>
+</head>
+<body>
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table class="email-container" cellpadding="0" cellspacing="0">
+          <!-- Header -->
+          <tr>
+            <td class="email-header">
+              <h1>Chào mừng bạn đến với [Tên Ứng Dụng]</h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="email-body">
+              <h2>Xin chào {{fullName}},</h2>
+              <p>
+                Tài khoản của bạn vừa được tạo bởi quản trị viên. Dưới đây là thông tin chi tiết để bạn có thể đăng nhập vào hệ thống:
+              </p>
+
+              <table class="info-table">
+                <tr>
+                  <th>Họ và tên</th>
+                  <td>{{fullName}}</td>
+                </tr>
+                <tr>
+                  <th>Email</th>
+                  <td>{{email}}</td>
+                </tr>
+                <tr>
+                  <th>Mật khẩu tạm thời</th>
+                  <td>{{password}}</td>
+                </tr>
+              </table>
+
+              <p>
+                Vui lòng nhấn nút bên dưới để đăng nhập và đổi mật khẩu ngay sau lần đầu sử dụng:
+              </p>
+              <p style="text-align: center; margin: 30px 0;">
+                <a href="{{loginUrl}}" class="btn">Đăng nhập ngay</a>
+              </p>
+
+              <p>
+                Nếu bạn gặp bất kỳ vấn đề gì hoặc có câu hỏi, hãy liên hệ với chúng tôi qua email: <a href="mailto:support@domain.com">support@domain.com</a>.
+              </p>
+
+              <p>
+                Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td class="email-footer">
+              <p>[Tên Công ty hoặc Đơn vị]</p>
+              <p>Địa chỉ: Số 123, Đường ABC, Quận XYZ, Thành phố</p>
+              <p>Điện thoại: 0123-456-789 | Email: support@domain.com</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

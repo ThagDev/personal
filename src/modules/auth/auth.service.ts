@@ -13,8 +13,6 @@ import { TokenService } from './token.service';
 import { JwtPayload } from 'jsonwebtoken';
 import { MailService } from '../mail/mail.service';
 
-// import axios from 'axios';
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -25,8 +23,6 @@ export class AuthService {
 
   async googleLogin(code: string) {
     try {
-      //console.log(code);
-
       // Bước 1: Gửi yêu cầu để lấy access token
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -48,10 +44,7 @@ export class AuthService {
       }
 
       const tokenData = await tokenResponse.json();
-      // console.log(tokenData);
       const { access_token } = tokenData;
-
-      //console.log(tokenData); // In ra thông tin token
 
       // Bước 2: Lấy thông tin người dùng từ Google
       const userInfoResponse = await fetch(
@@ -68,7 +61,6 @@ export class AuthService {
       }
 
       const user = await userInfoResponse.json();
-      //console.log(user);
       // Bước 3: Lưu refresh token vào MongoDB
 
       // Bước 4: Tạo access token
@@ -218,18 +210,6 @@ export class AuthService {
 
     const findId = await dbAuth.findOne({ accessToken: token });
 
-    // const findRefreshToken = await dbAuth.findOne({
-    //   _id: findId._id,
-    // });
-    // const decodedRefreshToken = await this.tokenService.verifyRefreshToken(
-    //   findId.refreshToken,
-    // );
-
-    // const { email } = decodedRefreshToken as JwtPayload;
-
-    // const user = await this.db.collection('auth').findOne({ email: email });
-    // if (!user) throw new UnauthorizedException('User not found');
-
     const generateNewAccessToken = this.tokenService.generateAccessToken(
       findId._id.toString(),
       findId.email,
@@ -290,5 +270,23 @@ export class AuthService {
     } else {
       throw new Error('Failed to logout');
     }
+  }
+
+  async getUserInfoByToken(accessToken: string) {
+    // Giải mã accessToken để lấy email
+    const decoded: any = this.tokenService.verifyAccessToken(accessToken);
+    const user = await this.db
+      .collection('auth')
+      .findOne({ email: decoded.email });
+    if (!user) throw new NotFoundException('User not found');
+    return {
+      email: user.email,
+      accessToken: user.accessToken,
+      avatar: user.avatar || '',
+      roles: user.roles || [],
+      username: user.username || '',
+      verified: user.verified || false,
+      updatedAt: user.updatedAt ? user.updatedAt.toISOString() : undefined,
+    };
   }
 }

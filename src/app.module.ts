@@ -1,58 +1,51 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { LoggerMiddleware } from './common/middleware/logger/logger.middleware';
-
 import { MongoDBModule } from './databases/mongodb.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
-import { AuthController } from './modules/auth/auth.controller';
-import { AuthService } from './modules/auth/auth.service';
-import { TokenService } from './modules/auth/token.service';
-import { MailService } from './modules/mail/mail.service';
 import { MailModule } from './modules/mail/mail.module';
-import { UploadModule } from './modules/upload/upload.module';
-import { UsersModule } from './modules/users/users.module';
-import { UsersService } from './modules/users/users.service';
-import { UsersController } from './modules/users/users.controller';
-import { PaginationService } from './common/pagination/pagination.service';
+import { UploadModule } from './modules/uploads/upload.module';
+import { UsersModule } from './modules/manageusers/users.module';
 import { RolesModule } from './modules/roles/roles.module';
-import { MenuTreesModule } from './modules/menu-trees/menu-trees.module';
-import { RolesGuard } from './common/middleware/roles.guard';
-import { Oauth2Guard } from './common/middleware/oauth.guard';
+import { FileModule } from './modules/drive/file/file.module';
+import { FolderModule } from './modules/drive/folder/folder.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { PermissionsModule } from './modules/permissions/permissions.module';
+import { PoliciesModule } from './modules/policies/policies.module';
+import { MutipleAuthModule } from './modules/mutiple-auth/mutiple-auth.module';
+import { ProfileModule } from './modules/profile/profile.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { DriveModule } from './modules/drive/drive.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: ['.env', '.env.development', '.env.production'],
     }),
+    MutipleAuthModule,
     AuthModule,
+    ProfileModule,
     MailModule,
     UploadModule,
     UsersModule,
     MongoDBModule.forRoot(
       process.env.MONGO_URI,
-      'pharmacy',
+      'personal',
       'MONGO_DB_CONNECTION',
     ),
+    MongooseModule.forRoot(process.env.MONGO_URI, { dbName: 'personal' }),
     RolesModule,
-    MenuTreesModule,
+    PermissionsModule,
+    PoliciesModule,
+    FileModule,
+    FolderModule,
+    DriveModule,
+    CategoriesModule,
   ],
-  controllers: [AuthController, UsersController],
-  providers: [
-    AuthService,
-    TokenService,
-    MailService,
-    UsersService,
-    PaginationService,
-    RolesGuard,
-    Oauth2Guard,
-  ],
-  exports: [PaginationService],
+  // Không export PaginationService vì không nằm trong providers của AppModule
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // consumer.apply(LoggerMiddleware).forRoutes('songs'); // option 1
-    // consumer
-    //   .apply(LoggerMiddleware)
-    //   .forRoutes({ path: 'songs', method: RequestMethod.POST }); // option 2
-    consumer.apply(LoggerMiddleware).forRoutes(); // option 3
+    consumer.apply(LoggerMiddleware).forRoutes();
   }
 }

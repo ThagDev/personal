@@ -12,18 +12,21 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SendEmailDto, VerifyCodeDto } from './dto/create-auth.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
 
 import {
   ApiBearerAuth,
   ApiOAuth2,
+  ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthorizationGuard } from '../../common/middleware/authorization.guard';
 import { Response, Request } from 'express';
 import * as cookie from 'cookie'; // Thư viện cookie
-import { Oauth2Guard } from 'src/common/middleware/oauth.guard';
+import { Oauth2Guard } from '../../common/middleware/oauth.guard';
 import { TokenService } from './token.service';
+import { success } from '../../common/response/base-response';
 
 @ApiTags('Auth')
 @Controller('api/auth')
@@ -33,8 +36,11 @@ export class AuthController {
     private tokenService: TokenService,
   ) {}
 
-
   @Post('/SmsOtp')
+  @ApiOperation({
+    summary: 'Lỏ để sau',
+    deprecated: true,
+  })
   async verifyOTP(): Promise<any> {}
 
   @Get('/google')
@@ -93,8 +99,7 @@ export class AuthController {
   }
   @UseGuards(Oauth2Guard)
   @Get('/userInfo')
-  async oauth2UserInfoController(@Req() request: Request) {
-    console.log(request);
+  async oauth2UserInfoController() {
     // const cookies = cookie.parse(request.headers.cookie || '');
     // const refreshtoken = cookies['refreshToken'];
     // return await this.authService.googleUserInfo(request);
@@ -104,32 +109,21 @@ export class AuthController {
   }
 
   @Post('/SendEmail')
-  async sendEmailController(@Body() sendEmailDto: SendEmailDto) {
-    try {
-      return await this.authService.SendEmailService(sendEmailDto);
-    } catch (error: any) {
-      Logger.error(error.message);
-    }
+  async sendEmail(@Body() sendEmailDto: any) {
+    const data = await this.authService.SendEmailService(sendEmailDto);
+    return success(data);
   }
 
   @Post('/VerifyCode')
+  @ApiResponse({ status: 200, type: AuthResponseDto })
   async verifyCodeRegisterController(
     @Body() verifyCodeDto: VerifyCodeDto,
-    // @Res() response: Response,
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = await this.authService.VerifyCodeService(verifyCodeDto);
-
     if (result.message === 'verified') {
       return { message: result.message };
     }
-    // response.cookie('accessToken', result.accessToken, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: 'strict',
-    //   maxAge: 15 * 60 * 1000, // 15 phút
-    //   path: '/',
-    // });
     const accessTokenCookie = cookie.serialize(
       'accessToken',
       result.accessToken,
@@ -138,31 +132,27 @@ export class AuthController {
         secure: true,
         sameSite: 'strict',
         maxAge: 15 * 60 * 1000, // 15 phút
-        path: '/', // Đảm bảo cookie có thể truy cập từ mọi route
+        path: '/',
       },
     );
-
     response.setHeader('Set-Cookie', accessTokenCookie);
-    return {
-      accessToken: result.accessToken,
-    };
+    // Chuẩn hóa trả về theo AuthResponseDto
+    const user = await this.authService.getUserInfoByToken(result.accessToken);
+    return user;
   }
 
   //
   @ApiBearerAuth()
   @UseGuards(AuthorizationGuard)
   @Post('/RefreshToken')
+  @ApiResponse({ status: 200, type: AuthResponseDto })
   async refreshTokenController(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    // const accessToken = (request as any).accessToken;
-    // const cookies = cookie.parse(request.headers.cookie || '');
-    // const refreshtoken = cookies['accessToken'];
     const result = await this.authService.RefreshTokenService(
       (request as any).accessToken,
     );
-    // console.log(result);
     const accessTokenCookie = cookie.serialize(
       'accessToken',
       result.accessToken,
@@ -171,15 +161,13 @@ export class AuthController {
         secure: true,
         sameSite: 'strict',
         maxAge: 15 * 60 * 1000, // 15 phút
-        path: '/', // Đảm bảo cookie có thể truy cập từ mọi route
+        path: '/',
       },
     );
-    // Set cookie vào header phản hồi
     response.setHeader('Set-Cookie', accessTokenCookie);
-
-    return {
-      accessToken: result.accessToken,
-    };
+    // Chuẩn hóa trả về theo AuthResponseDto
+    const user = await this.authService.getUserInfoByToken(result.accessToken);
+    return user;
   }
   @ApiBearerAuth()
   @UseGuards(AuthorizationGuard)
