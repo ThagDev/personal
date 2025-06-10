@@ -18,4 +18,35 @@ export class MailService {
       },
     });
   }
+
+  async sendCreateUserInfo({
+    fullName,
+    email,
+    password,
+    loginUrl,
+  }: {
+    fullName: string;
+    email: string;
+    password: string;
+    loginUrl: string;
+  }) {
+    try {
+      await this.mailerService.sendMail({
+        from: 'pharmacy@gmail.com',
+        to: email,
+        subject: 'Thông tin tài khoản mới',
+        template: 'CreateUserSendEmail',
+        context: {
+          fullName,
+          email,
+          password,
+          loginUrl,
+        },
+      });
+      // console.log('[MailService] Email sent to', email);
+    } catch (error) {
+      console.error('[MailService] Error sending email:', error);
+      throw error;
+    }
+  }
 }

@@ -25,4 +25,15 @@ describe('AppController (e2e)', () => {
       .expect(200)
       .expect('Hello World!');
   });
+
+  it('/api/file/root (GET) - should return root files (need valid JWT)', async () => {
+    const token = 'YOUR_JWT_TOKEN_HERE'; // Thay bằng token thật khi test
+    const res = await request(app.getHttpServer())
+      .get('/api/file/root')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(res.body).toHaveProperty('success', true);
+    expect(res.body).toHaveProperty('data');
+    // Có thể kiểm tra thêm structure của data tuỳ ý
+  });
 });

@@ -9,19 +9,16 @@ import {
 export class Oauth2Guard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    console.log(request.headers);
     const token = request.headers.authorization?.split(' ')[1];
-    console.log(token);
     if (!token) {
       throw new UnauthorizedException({ message: 'UnAuthorization' });
     }
+    // Đã loại bỏ log token và headers để tránh lộ thông tin nhạy cảm
     try {
-      // Giải mã access token để lấy thông tin người dùng (bao gồm _id)
+      // Nếu muốn xác thực token, inject TokenService và sử dụng verifyAccessToken như AuthorizationGuard
+      // Ví dụ:
       // const decoded = await this.tokenService.verifyAccessToken(token);
-
-      // Lưu thông tin người dùng vào request (có thể là _id, email, roles, v.v.)
       // request.user = decoded;
-      console.log(token);
       return true;
     } catch (error) {
       throw new UnauthorizedException({
@@ -30,3 +27,9 @@ export class Oauth2Guard implements CanActivate {
     }
   }
 }
+
+/*
+Chú thích:
+- Đã loại bỏ console.log để tránh lộ thông tin nhạy cảm.
+- Nếu muốn xác thực token, nên inject TokenService và xác thực như AuthorizationGuard.
+*/

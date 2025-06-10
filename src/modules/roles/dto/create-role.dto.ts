@@ -7,7 +7,7 @@ export class CreateRoleDto {
   @IsNotEmpty()
   @IsString()
   @Transform(({ value }) => value?.toLowerCase().trim()) // Chuyển thành chữ thường
-  role: string;
+  name: string;
   @ApiProperty({ example: 'unknown' })
   @IsString()
   description: string;

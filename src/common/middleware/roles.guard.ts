@@ -24,23 +24,20 @@ export class RolesGuard implements CanActivate {
     if (!roles) {
       return true; // Nếu không có vai trò nào yêu cầu, cho phép truy cập
     }
-
-    //
     const request = context.switchToHttp().getRequest();
     const token = request.headers.authorization?.split(' ')[1];
-
     if (!token) {
       throw new UnauthorizedException({ message: 'UnAuthorization' });
     }
-
-    // Giải mã access token để lấy thông tin người dùng (bao gồm _id)
+    // Xác thực token và lấy thông tin user
     const decoded = await this.tokenService.verifyAccessToken(token);
     const getUser = await this.db.collection('auth').findOne({
       email: (decoded as JwtPayload).email,
     });
-    const userRoles = getUser.roles;
-
-    // Lưu thông tin người dùng vào request (có thể là _id, email, roles, v.v.)
+    if (!getUser) {
+      throw new UnauthorizedException('User not found');
+    }
+    const userRoles = getUser.roles || [];
     // Kiểm tra xem người dùng có vai trò phù hợp không
     const hasRole = roles.some((role) => userRoles.includes(role));
     if (!hasRole) {
