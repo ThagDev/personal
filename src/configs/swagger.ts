@@ -13,8 +13,6 @@ export function setupSwagger(app: INestApplication) {
     .setTitle('API HoQuocThang')
     .setDescription('API description')
     .setVersion('v1.1')
-    .addServer('http://localhost:8888', 'Local server')
-    .addServer('https://hoquocthang.vercel.app', 'Production server')
     .addSecurityRequirements('bearer')
     .addBearerAuth()
     .addOAuth2(

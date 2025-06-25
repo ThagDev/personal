@@ -14,7 +14,6 @@ import {
   Req,
 } from '@nestjs/common';
 import { FileService } from './file.service';
-import { CreateFileDto } from './dto/create-file.dto';
 import { UpdateFileDto } from './dto/update-file.dto';
 import {
   ApiTags,
@@ -152,19 +151,6 @@ export class FileController {
     @Req() req: any,
   ) {
     return this.fileService.uploadMultipleFiles(files, userId, req);
-  }
-
-  @Get()
-  async findAll(@CurrentUserId() userId: string, @Query() query) {
-    return await this.fileService.findAll(userId, query);
-  }
-
-  @Post()
-  async create(
-    @Body() createFileDto: CreateFileDto,
-    @CurrentUserId() userId: string,
-  ) {
-    return await this.fileService.create(createFileDto, userId);
   }
 
   @Put(':id')
