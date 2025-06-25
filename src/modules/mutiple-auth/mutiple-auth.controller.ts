@@ -57,13 +57,7 @@ export class MutipleAuthController {
   async login(@Request() req, @Res({ passthrough: true }) res: Response) {
     const result = await this.mutipleAuthService.loginWithUser(req.user);
     if ('refreshToken' in result && result.refreshToken) {
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      this.setCookieOptions(res, result.refreshToken);
     }
     const output = { ...result };
     // Remove refreshToken from output if it exists
@@ -84,13 +78,7 @@ export class MutipleAuthController {
     const refreshToken = req.cookies['refreshToken'];
     const result = await this.mutipleAuthService.refreshToken(refreshToken);
     if ('refreshToken' in result && result.refreshToken) {
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      this.setCookieOptions(res, result.refreshToken);
     }
     const output = { ...result };
     if ('refreshToken' in output) {
@@ -113,11 +101,11 @@ export class MutipleAuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.mutipleAuthService.logout(email);
-    res.cookie('refreshToken', '', {
+    // Clear cookie bằng cách set empty value và maxAge = 0
+    res.clearCookie('refreshToken', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 0,
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       path: '/',
     });
     return { message: 'Logout successful' };
@@ -149,13 +137,7 @@ export class MutipleAuthController {
   ) {
     const result = await this.mutipleAuthService.verifyCodeService(dto);
     if ('refreshToken' in result && result.refreshToken) {
-      res.cookie('refreshToken', result.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      this.setCookieOptions(res, result.refreshToken);
     }
     const output = { ...result };
     // Remove refreshToken from output if it exists
@@ -175,5 +157,22 @@ export class MutipleAuthController {
   @Post('resend-code')
   async resendCode(@Body() dto: SendEmailDto) {
     return this.mutipleAuthService.resendCodeService(dto);
+  }
+
+  private setCookieOptions(res: Response, refreshToken: string) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isNgrok =
+      process.env.HOST?.includes('ngrok.io') ||
+      process.env.HOST?.includes('ngrok-free.app');
+    
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: isProduction || isNgrok, // HTTPS cho production hoặc ngrok
+      sameSite: isProduction ? 'strict' : 'lax', // Lax để hỗ trợ cross-site requests
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+      path: '/',
+      // Có thể thêm domain nếu cần
+      // domain: process.env.COOKIE_DOMAIN
+    });
   }
 }

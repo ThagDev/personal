@@ -94,7 +94,6 @@ export class MutipleAuthService {
     await user.save();
     return this.toClientJson(user);
   }
-
   async refreshToken(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {
@@ -109,11 +108,17 @@ export class MutipleAuthService {
         throw new UnauthorizedException(
           MutipleAuthMessages.INVALID_REFRESH_TOKEN,
         );
-      const { accessToken } = this.generateTokens(user);
+
+      // Tạo cả access token và refresh token mới (token rotation)
+      const { accessToken, refreshToken: newRefreshToken } =
+        this.generateTokens(user);
       user.accessToken = accessToken;
+      user.refreshToken = newRefreshToken; // Cập nhật refresh token mới
       await user.save();
       return this.toClientJson(user);
-    } catch {
+    } catch (error) {
+      // Log error để debug nếu cần
+      console.error('Refresh token error:', error);
       throw new UnauthorizedException(
         MutipleAuthMessages.INVALID_REFRESH_TOKEN,
       );
@@ -232,5 +237,19 @@ export class MutipleAuthService {
       throw new UnauthorizedException(MutipleAuthMessages.EMAIL_NOT_REGISTERED);
     }
     return await this.generateAndSendVerificationCode(dto.email, user);
+  }
+
+  private async checkRefreshTokenRateLimit(email: string): Promise<void> {
+    //const MAX_REFRESH_PER_HOUR = 10; // Giới hạn 10 lần refresh/giờ
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    // Đếm số lần refresh trong 1 giờ qua (có thể lưu vào Redis hoặc cache riêng)
+    // Ở đây ta check qua updatedAt field của user
+    const user = await this.mutipleAuthModel.findOne({ email });
+    if (user && user.updatedAt && user.updatedAt > oneHourAgo) {
+      // Simplified rate limiting - in production use Redis or proper cache
+      // Có thể tạo field riêng để track refresh attempts
+    }
   }
 }

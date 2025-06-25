@@ -1,0 +1,10 @@
+version: 3
+agent:
+  authtoken: 2xWDn98hTl7hIS5FxNnm64kLeRY_4fLe3jn7Xe7eXnBtuzW6j
+endpoints:
+  - name: your_tunnel_name
+    url: cat-arriving-martin.ngrok-free.app
+    upstream:
+      url: 80
+
+      
