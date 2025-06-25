@@ -51,30 +51,19 @@ async function bootstrap() {
   Logger.log(`Application is running on: http://localhost:8888`);
 
   // Start ngrok tunnel for remote testing (only in development)
-  if (process.env.NODE_ENV !== 'production') {
-    try {
-      const listener = await connect({
-        addr: 8888,
-        domain: 'cat-arriving-martin.ngrok-free.app',
-        authtoken: '2xWDn98hTl7hIS5FxNnm64kLeRY_4fLe3jn7Xe7eXnBtuzW6j',
-      });
+  try {
+    const listener = await connect({
+      addr: 8888,
+      domain: 'cat-arriving-martin.ngrok-free.app',
+      authtoken: '2xWDn98hTl7hIS5FxNnm64kLeRY_4fLe3jn7Xe7eXnBtuzW6j',
+    });
 
-      const ngrokUrl = listener.url();
-      Logger.log(`🌍 Ngrok tunnel established at: ${ngrokUrl}`);
-      Logger.log(`🚀 Public API URL: ${ngrokUrl}`);
-    } catch (err) {
-      Logger.error(`❌ Failed to establish ngrok tunnel: ${err.message}`);
-      Logger.log(
-        `💡 Server is still running locally at: http://localhost:8888`,
-      );
-    }
-  } else {
-    Logger.log(
-      `🚀 Production server running at: ${process.env.PRODUCTION_URL || 'https://your-domain.com'}`,
-    );
-    Logger.log(
-      `📖 Production Swagger docs: ${process.env.PRODUCTION_URL || 'https://your-domain.com'}/api`,
-    );
+    const ngrokUrl = listener.url();
+    Logger.log(`🌍 Ngrok tunnel established at: ${ngrokUrl}`);
+    Logger.log(`🚀 Public API URL: ${ngrokUrl}`);
+  } catch (err) {
+    Logger.error(`❌ Failed to establish ngrok tunnel: ${err.message}`);
+    Logger.log(`💡 Server is still running locally at: http://localhost:8888`);
   }
 }
 bootstrap();
