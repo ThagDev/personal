@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { PoliciesService } from './policies.service';
 import { PoliciesController } from './policies.controller';
-// ...add providers/controllers if needed...
+import { PaginationService } from '../../common/pagination/pagination.service';
+
 @Module({
-  providers: [PoliciesService],
+  providers: [PoliciesService, PaginationService],
   controllers: [PoliciesController],
 })
 export class PoliciesModule {}
