@@ -8,18 +8,14 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-// Global type declaration for Vercel serverless
-declare global {
-  // eslint-disable-next-line no-var
-  var app: any;
-}
+let app: any;
 
-// Vercel serverless handler
-export default async function handler(req: any, res: any) {
-  if (!global.app) {
-    const app = await NestFactory.create(AppModule);
+// Create application instance
+async function createApp() {
+  if (!app) {
+    app = await NestFactory.create(AppModule);
 
-    // Configure CORS for production
+    // Configure CORS
     app.enableCors({
       origin: [
         'http://localhost:3000',
@@ -35,8 +31,10 @@ export default async function handler(req: any, res: any) {
 
     app.use(cookieParser());
 
-    // Setup Swagger for production
-    setupSwagger(app);
+    // Setup Swagger only in non-production
+    if (process.env.NODE_ENV !== 'production') {
+      setupSwagger(app);
+    }
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -49,11 +47,15 @@ export default async function handler(req: any, res: any) {
     app.useGlobalFilters(new AllExceptionsFilter());
 
     await app.init();
-    global.app = app.getHttpAdapter().getInstance();
   }
-
-  return global.app(req, res);
+  return app;
 }
+
+// Export for Vercel
+module.exports = async (req: any, res: any) => {
+  const nestApp = await createApp();
+  return nestApp.getHttpAdapter().getInstance()(req, res);
+};
 
 // Development bootstrap function
 async function bootstrap() {

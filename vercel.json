@@ -1,18 +1,11 @@
 {
   "version": 2,
-  "functions": {
-    "dist/main.js": {
-      "runtime": "nodejs18.x",
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
   "builds": [
     {
-      "src": "package.json",
+      "src": "dist/main.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["dist/**"]
+        "maxLambdaSize": "50mb"
       }
     }
   ],
@@ -20,16 +13,6 @@
     {
       "src": "/(.*)",
       "dest": "dist/main.js"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/dist/main.js"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/dist/main.js"
     }
   ]
 }
