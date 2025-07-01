@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { BaseService } from '../../common/services/base.service';
 import { PaginationService } from '../../common/pagination/pagination.service';
-import { CreatePolicyDto } from './dto/create-policy.dto';
+import { CreatePermissionDto } from './dto/create-permission.dto';
 import { Db } from 'mongodb';
 
 @Injectable()
-export class PoliciesService extends BaseService {
-  protected collectionName = 'policies';
+export class PermissionsService extends BaseService {
+  protected collectionName = 'permissions';
 
   constructor(
     @Inject('MONGO_DB_CONNECTION') db: Db,
@@ -15,7 +15,7 @@ export class PoliciesService extends BaseService {
     super(db, paginationService);
   }
 
-  async createPolicy(dto: CreatePolicyDto) {
+  async createPermission(dto: CreatePermissionDto) {
     return this.create(dto);
   }
 }
