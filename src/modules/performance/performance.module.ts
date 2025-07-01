@@ -6,7 +6,11 @@ import { PaginationService } from '../../common/pagination/pagination.service';
 
 @Module({
   controllers: [PerformanceController],
-  providers: [PerformanceMonitoringService, DatabaseIndexService, PaginationService],
+  providers: [
+    PerformanceMonitoringService,
+    DatabaseIndexService,
+    PaginationService,
+  ],
   exports: [PerformanceMonitoringService, DatabaseIndexService],
 })
 export class PerformanceModule {}

@@ -8,12 +8,11 @@ import {
   UploadedFile,
   Logger,
   Param,
-  UseGuards,
   UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
 import { UploadService } from './upload.service';
 import {
-  ApiBearerAuth,
   ApiBody,
   ApiConsumes,
   ApiOperation,
@@ -24,26 +23,58 @@ import {
 import { Request, Response } from 'express';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
 import { ObjectId } from 'mongodb';
-import { success } from '../../common/response/base-response';
+import { BaseController } from '../../common/response/base-controller';
+import { AuthenticatedOperation } from '../../common/decorators/api.decorator';
 
-@ApiTags('Uploads')
+@ApiTags('File Uploads')
 @Controller('uploads')
-export class UploadController {
+export class UploadController extends BaseController {
   private readonly logger = new Logger(UploadController.name);
-  private handleError(
-    res: Response,
-    message: string,
-    statusCode: number,
-    error?: Error,
-  ) {
-    if (error) this.logger.error(`${message}: ${error.message}`);
-    res.status(statusCode).json({ message, error: error?.message });
+
+  constructor(private readonly uploadService: UploadService) {
+    super();
   }
-  constructor(private readonly uploadService: UploadService) {}
-  @ApiBearerAuth()
-  @UseGuards(AuthorizationGuard)
+
+  /**
+   * Static multer options for file upload validation
+   */
+  private static getMulterOptions(maxSize: number = 5 * 1024 * 1024) {
+    const ALLOWED_EXTENSIONS = [
+      '.txt',
+      '.doc',
+      '.docx',
+      '.pdf',
+      '.ppt',
+      '.pptx',
+      '.xls',
+      '.xlsx',
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.gif',
+      '.bmp',
+      '.webp',
+      '.svg',
+    ];
+
+    return {
+      storage: multer.memoryStorage(),
+      fileFilter: (req, file, cb) => {
+        const ext = (file.originalname.match(/\.[^.]+$/) || [
+          '',
+        ])[0]?.toLowerCase();
+        if (ALLOWED_EXTENSIONS.includes(ext)) {
+          cb(null, true);
+        } else {
+          cb(new Error('File type not allowed'), false);
+        }
+      },
+      limits: { fileSize: maxSize },
+    };
+  }
+
+  @AuthenticatedOperation('Upload avatar image (converted to WebP)')
   @Post('/avatar')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -55,144 +86,72 @@ export class UploadController {
       },
     },
   })
-  @ApiOperation({ summary: 'Upload avatar image' })
-  @ApiResponse({
-    status: 201,
-    description: 'File uploaded and converted to webp.',
-  })
-  @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
-  )
-  async UploadAvatarController(
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    try {
-      if (!file) {
-        return res.status(400).json({
-          message: 'no file uploaded or file size exceeds the limit!',
-        });
-      }
-      // Gọi service để upload file
-      const result = await this.uploadService.uploadAvatarService(file.buffer);
-      res.status(201).json({
-        message: 'File uploaded and converted to webp!',
-        fileId: result.fileId,
-      });
-    } catch (error) {
-      this.handleError(res, 'Internal server error', 500, error);
+  @UseInterceptors(FileInterceptor('file', UploadController.getMulterOptions()))
+  async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException(
+        'No file uploaded or file size exceeds the limit',
+      );
     }
+
+    const result = await this.uploadService.uploadAvatar(file.buffer);
+    return this.successResponse({
+      message: 'Avatar uploaded and converted to WebP successfully',
+      fileId: result.fileId,
+    });
   }
+
   @Get('/image/:id')
-  @ApiOperation({ summary: 'Download webp image by ID' })
-  @ApiParam({ name: 'id', description: 'ID of the file to download' })
+  @ApiOperation({ summary: 'Download file by ID' })
+  @ApiParam({ name: 'id', description: 'File ID to download' })
   @ApiResponse({
     status: 200,
-    description: 'File downloaded successfully.',
-    content: { 'image/webp': { schema: { type: 'string', format: 'binary' } } },
+    description: 'File downloaded successfully',
+    content: {
+      'application/octet-stream': {
+        schema: { type: 'string', format: 'binary' },
+      },
+    },
   })
-  async DownloadFileController(@Param('id') id: string, @Res() res: Response) {
+  async downloadFile(@Param('id') id: string, @Res() res: Response) {
     if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'Invalid file id' });
+      return res.status(400).json({ message: 'Invalid file ID' });
     }
-    return await this.uploadService.DownloadFileService(id, res);
+    return this.uploadService.downloadFile(id, res);
   }
-  @Post('image')
-  @ApiOperation({ summary: 'Upload image with url ' })
-  @UseInterceptors(FileInterceptor('file'))
+
+  @Post('single')
+  @ApiOperation({ summary: 'Upload single file' })
+  @UseInterceptors(FileInterceptor('file', UploadController.getMulterOptions()))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-        },
+        file: { type: 'string', format: 'binary' },
       },
     },
   })
-  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
-    // console.log(file);
-    return success(await this.uploadService.uploadFile(file, req));
-    // return {
-    //   filename: file.filename,
-    //   id: file.id,
-    // };
+  async uploadSingleFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const result = await this.uploadService.uploadFile(file, req);
+    return this.successResponse(result);
   }
 
-  private readonly allowedExtensions = [
-    '.txt',
-    '.doc',
-    '.docx',
-    '.pdf',
-    '.ppt',
-    '.pptx',
-    '.xls',
-    '.xlsx',
-    '.jpg',
-    '.jpeg',
-    '.png',
-    '.gif',
-    '.bmp',
-    '.webp',
-    '.svg',
-  ];
-
-  private getMultiMulterOptions() {
-    return {
-      storage: multer.memoryStorage(),
-      fileFilter: (req, file, cb) => {
-        const ext = (file.originalname.match(/\.[^.]+$/) || [
-          '',
-        ])[0]?.toLowerCase();
-        if (this.allowedExtensions.includes(ext)) {
-          cb(null, true);
-        } else {
-          cb(new Error('File type not allowed'), false);
-        }
-      },
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB mỗi file
-    };
-  }
-
-  @Post('multi')
-  @ApiOperation({
-    summary: 'Upload nhiều file với các định dạng cho phép (lưu GridFS)',
-  })
+  @Post('multiple')
+  @ApiOperation({ summary: 'Upload multiple files (max 10 files, 10MB each)' })
   @UseInterceptors(
-    FilesInterceptor('files', 10, {
-      storage: multer.memoryStorage(),
-      fileFilter: (req, file, cb) => {
-        const ext = (file.originalname.match(/\.[^.]+$/) || [
-          '',
-        ])[0]?.toLowerCase();
-        const allowed = [
-          '.txt',
-          '.doc',
-          '.docx',
-          '.pdf',
-          '.ppt',
-          '.pptx',
-          '.xls',
-          '.xlsx',
-          '.jpg',
-          '.jpeg',
-          '.png',
-          '.gif',
-          '.bmp',
-          '.webp',
-          '.svg',
-        ];
-        if (allowed.includes(ext)) {
-          cb(null, true);
-        } else {
-          cb(new Error('File type not allowed'), false);
-        }
-      },
-      limits: { fileSize: 10 * 1024 * 1024 },
-    }),
+    FilesInterceptor(
+      'files',
+      10,
+      UploadController.getMulterOptions(10 * 1024 * 1024),
+    ),
   )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -210,6 +169,11 @@ export class UploadController {
     @UploadedFiles() files: Express.Multer.File[],
     @Req() req: any,
   ) {
-    return success(await this.uploadService.uploadMultipleFiles(files, req));
+    if (!files?.length) {
+      throw new BadRequestException('No files uploaded');
+    }
+
+    const result = await this.uploadService.uploadMultipleFiles(files, req);
+    return this.successResponse(result);
   }
 }

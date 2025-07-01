@@ -17,7 +17,10 @@ import {
   AssignPoliciesDto,
 } from './dto/assign-permissions-policies.dto';
 import { BaseController } from '../../common/response/base-controller';
-import { AdminOperation, PaginationQueries } from '../../common/decorators/api.decorator';
+import {
+  AdminOperation,
+  PaginationQueries,
+} from '../../common/decorators/api.decorator';
 
 @ApiTags('Roles')
 @Controller('/api')

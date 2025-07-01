@@ -15,7 +15,10 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { CreateUserWithRolesDto } from './dto/create-user-with-roles.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { BaseController } from '../../common/response/base-controller';
-import { AdminOperation, PaginationQueries } from '../../common/decorators/api.decorator';
+import {
+  AdminOperation,
+  PaginationQueries,
+} from '../../common/decorators/api.decorator';
 
 @ApiTags('Manage Users')
 @Controller('/api')
@@ -63,7 +66,10 @@ export class UsersController extends BaseController {
     @Param('id') id: string,
     @Body() assignRolesDto: AssignRolesDto,
   ) {
-    const data = await this.usersService.assignRolesToUser(id, assignRolesDto.roles);
+    const data = await this.usersService.assignRolesToUser(
+      id,
+      assignRolesDto.roles,
+    );
     return this.successResponse(data);
   }
 

@@ -16,7 +16,8 @@ export class PerformanceController {
   @Get('metrics')
   @ApiResponse({
     status: 200,
-    description: 'System performance metrics including memory, CPU, database stats',
+    description:
+      'System performance metrics including memory, CPU, database stats',
   })
   async getMetrics() {
     return this.performanceService.getMetrics();
@@ -50,7 +51,7 @@ export class PerformanceController {
   })
   async healthCheck() {
     const metrics = await this.performanceService.getMetrics();
-    
+
     return {
       status: 'healthy',
       timestamp: new Date().toISOString(),

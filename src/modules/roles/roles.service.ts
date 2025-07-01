@@ -1,11 +1,6 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { BaseService } from '../../common/services/base.service';
 import { PaginationService } from '../../common/pagination/pagination.service';
-import { UpdateRoleDto } from './dto/update-role.dto';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { Db } from 'mongodb';
 
@@ -21,9 +16,10 @@ export class RolesService extends BaseService {
   }
 
   async create(createRoleDto: CreateRoleDto) {
-    const existing = await this.db.collection('roles')
+    const existing = await this.db
+      .collection('roles')
       .findOne({ name: createRoleDto.name });
-    
+
     if (existing) {
       throw new ConflictException('Role name already exists');
     }

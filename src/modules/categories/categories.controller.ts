@@ -14,7 +14,6 @@ import {
   ApiBody,
   ApiParam,
   ApiQuery,
-  ApiResponse,
 } from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -43,14 +42,18 @@ export class CategoriesController extends BaseController {
     },
   })
   async createTree(@Body() dto: CreateCategoryDto) {
-    const data = await this.categoriesService.create({ ...dto, parentIds: undefined });
+    const data = await this.categoriesService.create({
+      ...dto,
+      parentIds: undefined,
+    });
     return this.successResponse(data);
   }
 
   @Post('graph')
   @ApiOperation({ summary: 'Tạo mới category dạng graph (nhiều cha)' })
   @ApiBody({
-    description: 'Dữ liệu category dạng graph. Truyền parentIds là mảng các id cha.',
+    description:
+      'Dữ liệu category dạng graph. Truyền parentIds là mảng các id cha.',
     schema: {
       example: {
         name: 'Thiết bị thông minh',
@@ -63,7 +66,10 @@ export class CategoriesController extends BaseController {
     },
   })
   async createGraph(@Body() dto: CreateCategoryDto) {
-    const data = await this.categoriesService.create({ ...dto, parentId: undefined });
+    const data = await this.categoriesService.create({
+      ...dto,
+      parentId: undefined,
+    });
     return this.successResponse(data);
   }
 

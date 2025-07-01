@@ -23,12 +23,12 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
+import { AuthorizationGuard } from '../../../common/middleware/authorization.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { Response } from 'express';
-import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
-import { success } from 'src/common/response/base-response';
+import { CurrentUserId } from '../../../common/decorators/current-user.decorator';
+import { success } from '../../../common/response/base-response';
 
 @ApiTags('File')
 @Controller('/api/file')
