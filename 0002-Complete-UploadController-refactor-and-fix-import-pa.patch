@@ -1,0 +1,1066 @@
+From 3b3eaa84587ed840aa214ed29052082a3f05e2a8 Mon Sep 17 00:00:00 2001
+From: "DESKTOP-8I4B8NM\\hoquo" <hoquocthang150722@gmail.com>
+Date: Tue, 1 Jul 2025 16:38:50 +0700
+Subject: [PATCH 2/2] Complete UploadController refactor and fix import paths
+
+- Fixed constructor injection for UploadService in UploadController
+- Removed unused imports and cleaned up code formatting
+- Optimized multer configuration using static methods for reusability
+- Fixed import paths in drive modules (authorization.guard, current-user.decorator)
+- Ensured consistent use of BaseController pattern throughout uploads module
+- All upload endpoints now properly validated and use optimized file handling
+- Build successfully completes without errors
+---
+ .../categories/categories.controller.ts       |  14 +-
+ src/modules/drive/drive.controller.ts         |   4 +-
+ src/modules/drive/file/file.controller.ts     |   6 +-
+ src/modules/drive/folder/folder.controller.ts |   6 +-
+ src/modules/manageusers/users.controller.ts   |  10 +-
+ src/modules/manageusers/users.service.ts      |  13 +-
+ .../performance/performance.controller.ts     |   5 +-
+ src/modules/performance/performance.module.ts |   6 +-
+ src/modules/roles/roles.controller.ts         |   5 +-
+ src/modules/roles/roles.policy.controller.ts  |   6 +-
+ src/modules/roles/roles.service.ts            |  12 +-
+ src/modules/uploads/upload.controller.ts      | 234 +++++------
+ src/modules/uploads/upload.service.ts         | 392 ++++++++++--------
+ 13 files changed, 371 insertions(+), 342 deletions(-)
+
+diff --git a/src/modules/categories/categories.controller.ts b/src/modules/categories/categories.controller.ts
+index 1d83797..6268826 100644
+--- a/src/modules/categories/categories.controller.ts
++++ b/src/modules/categories/categories.controller.ts
+@@ -14,7 +14,6 @@ import {
+   ApiBody,
+   ApiParam,
+   ApiQuery,
+-  ApiResponse,
+ } from '@nestjs/swagger';
+ import { CategoriesService } from './categories.service';
+ import { CreateCategoryDto } from './dto/create-category.dto';
+@@ -43,14 +42,18 @@ export class CategoriesController extends BaseController {
+     },
+   })
+   async createTree(@Body() dto: CreateCategoryDto) {
+-    const data = await this.categoriesService.create({ ...dto, parentIds: undefined });
++    const data = await this.categoriesService.create({
++      ...dto,
++      parentIds: undefined,
++    });
+     return this.successResponse(data);
+   }
+ 
+   @Post('graph')
+   @ApiOperation({ summary: 'Tạo mới category dạng graph (nhiều cha)' })
+   @ApiBody({
+-    description: 'Dữ liệu category dạng graph. Truyền parentIds là mảng các id cha.',
++    description:
++      'Dữ liệu category dạng graph. Truyền parentIds là mảng các id cha.',
+     schema: {
+       example: {
+         name: 'Thiết bị thông minh',
+@@ -63,7 +66,10 @@ export class CategoriesController extends BaseController {
+     },
+   })
+   async createGraph(@Body() dto: CreateCategoryDto) {
+-    const data = await this.categoriesService.create({ ...dto, parentId: undefined });
++    const data = await this.categoriesService.create({
++      ...dto,
++      parentId: undefined,
++    });
+     return this.successResponse(data);
+   }
+ 
+diff --git a/src/modules/drive/drive.controller.ts b/src/modules/drive/drive.controller.ts
+index e51539e..2464e18 100644
+--- a/src/modules/drive/drive.controller.ts
++++ b/src/modules/drive/drive.controller.ts
+@@ -5,8 +5,8 @@ import {
+   ApiOperation,
+   ApiQuery,
+ } from '@nestjs/swagger';
+-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
+-import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
++import { AuthorizationGuard } from '../../common/middleware/authorization.guard';
++import { CurrentUserId } from '../../common/decorators/current-user.decorator';
+ import { DriveService } from './drive.service';
+ import { success } from '../../common/response/base-response';
+ 
+diff --git a/src/modules/drive/file/file.controller.ts b/src/modules/drive/file/file.controller.ts
+index 511b124..5ee7ef1 100644
+--- a/src/modules/drive/file/file.controller.ts
++++ b/src/modules/drive/file/file.controller.ts
+@@ -23,12 +23,12 @@ import {
+   ApiOperation,
+   ApiResponse,
+ } from '@nestjs/swagger';
+-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
++import { AuthorizationGuard } from '../../../common/middleware/authorization.guard';
+ import { FilesInterceptor } from '@nestjs/platform-express';
+ import * as multer from 'multer';
+ import { Response } from 'express';
+-import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
+-import { success } from 'src/common/response/base-response';
++import { CurrentUserId } from '../../../common/decorators/current-user.decorator';
++import { success } from '../../../common/response/base-response';
+ 
+ @ApiTags('File')
+ @Controller('/api/file')
+diff --git a/src/modules/drive/folder/folder.controller.ts b/src/modules/drive/folder/folder.controller.ts
+index f95df05..ce6bb56 100644
+--- a/src/modules/drive/folder/folder.controller.ts
++++ b/src/modules/drive/folder/folder.controller.ts
+@@ -16,9 +16,9 @@ import { FolderService } from './folder.service';
+ import { CreateFolderDto } from './dto/create-folder.dto';
+ import { UpdateFolderDto } from './dto/update-folder.dto';
+ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
+-import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
+-import { success } from 'src/common/response/base-response';
++import { AuthorizationGuard } from '../../../common/middleware/authorization.guard';
++import { CurrentUserId } from '../../../common/decorators/current-user.decorator';
++import { success } from '../../../common/response/base-response';
+ 
+ @ApiTags('Folder')
+ @Controller('/api/folder')
+diff --git a/src/modules/manageusers/users.controller.ts b/src/modules/manageusers/users.controller.ts
+index b3a706b..14d611b 100644
+--- a/src/modules/manageusers/users.controller.ts
++++ b/src/modules/manageusers/users.controller.ts
+@@ -15,7 +15,10 @@ import { CreateUserDto } from './dto/create-user.dto';
+ import { CreateUserWithRolesDto } from './dto/create-user-with-roles.dto';
+ import { ApiTags } from '@nestjs/swagger';
+ import { BaseController } from '../../common/response/base-controller';
+-import { AdminOperation, PaginationQueries } from '../../common/decorators/api.decorator';
++import {
++  AdminOperation,
++  PaginationQueries,
++} from '../../common/decorators/api.decorator';
+ 
+ @ApiTags('Manage Users')
+ @Controller('/api')
+@@ -63,7 +66,10 @@ export class UsersController extends BaseController {
+     @Param('id') id: string,
+     @Body() assignRolesDto: AssignRolesDto,
+   ) {
+-    const data = await this.usersService.assignRolesToUser(id, assignRolesDto.roles);
++    const data = await this.usersService.assignRolesToUser(
++      id,
++      assignRolesDto.roles,
++    );
+     return this.successResponse(data);
+   }
+ 
+diff --git a/src/modules/manageusers/users.service.ts b/src/modules/manageusers/users.service.ts
+index deb29f2..5e98b5d 100644
+--- a/src/modules/manageusers/users.service.ts
++++ b/src/modules/manageusers/users.service.ts
+@@ -3,9 +3,8 @@ import { BaseService } from '../../common/services/base.service';
+ import { PaginationService } from '../../common/pagination/pagination.service';
+ import { MailService } from '../mail/mail.service';
+ import { CreateUserDto } from './dto/create-user.dto';
+-import { UpdateUserDto } from './dto/update-user.dto';
+ import { CreateUserWithRolesDto } from './dto/create-user-with-roles.dto';
+-import { Db, ObjectId } from 'mongodb';
++import { Db } from 'mongodb';
+ import * as bcrypt from 'bcrypt';
+ 
+ @Injectable()
+@@ -21,9 +20,10 @@ export class UsersService extends BaseService {
+   }
+ 
+   async createUserService(createUserDto: CreateUserDto) {
+-    const existing = await this.db.collection('users')
++    const existing = await this.db
++      .collection('users')
+       .findOne({ email: createUserDto.email });
+-    
++
+     if (existing) {
+       throw new ConflictException('Email already exists');
+     }
+@@ -52,12 +52,13 @@ export class UsersService extends BaseService {
+ 
+     // Send email with temp password (implement in mail service)
+     // await this.mailService.sendWelcomeEmail(user.email, tempPassword);
+-    
++
+     return { ...user, tempPassword }; // Return temp password for now
+   }
+ 
+   private generateRandomPassword(length: number = 12): string {
+-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
++    const chars =
++      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+     let password = '';
+     for (let i = 0; i < length; i++) {
+       password += chars.charAt(Math.floor(Math.random() * chars.length));
+diff --git a/src/modules/performance/performance.controller.ts b/src/modules/performance/performance.controller.ts
+index 4b51a26..1727a34 100644
+--- a/src/modules/performance/performance.controller.ts
++++ b/src/modules/performance/performance.controller.ts
+@@ -16,7 +16,8 @@ export class PerformanceController {
+   @Get('metrics')
+   @ApiResponse({
+     status: 200,
+-    description: 'System performance metrics including memory, CPU, database stats',
++    description:
++      'System performance metrics including memory, CPU, database stats',
+   })
+   async getMetrics() {
+     return this.performanceService.getMetrics();
+@@ -50,7 +51,7 @@ export class PerformanceController {
+   })
+   async healthCheck() {
+     const metrics = await this.performanceService.getMetrics();
+-    
++
+     return {
+       status: 'healthy',
+       timestamp: new Date().toISOString(),
+diff --git a/src/modules/performance/performance.module.ts b/src/modules/performance/performance.module.ts
+index 510768e..6fc9c53 100644
+--- a/src/modules/performance/performance.module.ts
++++ b/src/modules/performance/performance.module.ts
+@@ -6,7 +6,11 @@ import { PaginationService } from '../../common/pagination/pagination.service';
+ 
+ @Module({
+   controllers: [PerformanceController],
+-  providers: [PerformanceMonitoringService, DatabaseIndexService, PaginationService],
++  providers: [
++    PerformanceMonitoringService,
++    DatabaseIndexService,
++    PaginationService,
++  ],
+   exports: [PerformanceMonitoringService, DatabaseIndexService],
+ })
+ export class PerformanceModule {}
+diff --git a/src/modules/roles/roles.controller.ts b/src/modules/roles/roles.controller.ts
+index 566183a..db87fb1 100644
+--- a/src/modules/roles/roles.controller.ts
++++ b/src/modules/roles/roles.controller.ts
+@@ -17,7 +17,10 @@ import {
+   AssignPoliciesDto,
+ } from './dto/assign-permissions-policies.dto';
+ import { BaseController } from '../../common/response/base-controller';
+-import { AdminOperation, PaginationQueries } from '../../common/decorators/api.decorator';
++import {
++  AdminOperation,
++  PaginationQueries,
++} from '../../common/decorators/api.decorator';
+ 
+ @ApiTags('Roles')
+ @Controller('/api')
+diff --git a/src/modules/roles/roles.policy.controller.ts b/src/modules/roles/roles.policy.controller.ts
+index feb759e..a2507f9 100644
+--- a/src/modules/roles/roles.policy.controller.ts
++++ b/src/modules/roles/roles.policy.controller.ts
+@@ -1,4 +1,4 @@
+-import { Body, Controller, Patch, Param, Put, Post } from '@nestjs/common';
++import { Body, Controller, Param, Put, Post } from '@nestjs/common';
+ import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
+ import { RolesPolicyService } from './roles.policy.service';
+ import { success } from '../../common/response/base-response';
+@@ -39,9 +39,7 @@ export class RolesPolicyController {
+   }
+ 
+   @Post('assign-permissions')
+-  assignPermissionsToPolicyPost(
+-    @Body() assignPermissionsDto: any,
+-  ) {
++  assignPermissionsToPolicyPost(@Body() assignPermissionsDto: any) {
+     const data = this.rolesPolicyService.assignPermissionsToPolicy(
+       assignPermissionsDto.id,
+       assignPermissionsDto.permissions,
+diff --git a/src/modules/roles/roles.service.ts b/src/modules/roles/roles.service.ts
+index 78671c0..d666082 100644
+--- a/src/modules/roles/roles.service.ts
++++ b/src/modules/roles/roles.service.ts
+@@ -1,11 +1,6 @@
+-import {
+-  ConflictException,
+-  Inject,
+-  Injectable,
+-} from '@nestjs/common';
++import { ConflictException, Inject, Injectable } from '@nestjs/common';
+ import { BaseService } from '../../common/services/base.service';
+ import { PaginationService } from '../../common/pagination/pagination.service';
+-import { UpdateRoleDto } from './dto/update-role.dto';
+ import { CreateRoleDto } from './dto/create-role.dto';
+ import { Db } from 'mongodb';
+ 
+@@ -21,9 +16,10 @@ export class RolesService extends BaseService {
+   }
+ 
+   async create(createRoleDto: CreateRoleDto) {
+-    const existing = await this.db.collection('roles')
++    const existing = await this.db
++      .collection('roles')
+       .findOne({ name: createRoleDto.name });
+-    
++
+     if (existing) {
+       throw new ConflictException('Role name already exists');
+     }
+diff --git a/src/modules/uploads/upload.controller.ts b/src/modules/uploads/upload.controller.ts
+index 4d7fe01..d5054dc 100644
+--- a/src/modules/uploads/upload.controller.ts
++++ b/src/modules/uploads/upload.controller.ts
+@@ -8,12 +8,11 @@ import {
+   UploadedFile,
+   Logger,
+   Param,
+-  UseGuards,
+   UploadedFiles,
++  BadRequestException,
+ } from '@nestjs/common';
+ import { UploadService } from './upload.service';
+ import {
+-  ApiBearerAuth,
+   ApiBody,
+   ApiConsumes,
+   ApiOperation,
+@@ -24,26 +23,58 @@ import {
+ import { Request, Response } from 'express';
+ import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+ import * as multer from 'multer';
+-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
+ import { ObjectId } from 'mongodb';
+-import { success } from '../../common/response/base-response';
++import { BaseController } from '../../common/response/base-controller';
++import { AuthenticatedOperation } from '../../common/decorators/api.decorator';
+ 
+-@ApiTags('Uploads')
++@ApiTags('File Uploads')
+ @Controller('uploads')
+-export class UploadController {
++export class UploadController extends BaseController {
+   private readonly logger = new Logger(UploadController.name);
+-  private handleError(
+-    res: Response,
+-    message: string,
+-    statusCode: number,
+-    error?: Error,
+-  ) {
+-    if (error) this.logger.error(`${message}: ${error.message}`);
+-    res.status(statusCode).json({ message, error: error?.message });
++
++  constructor(private readonly uploadService: UploadService) {
++    super();
+   }
+-  constructor(private readonly uploadService: UploadService) {}
+-  @ApiBearerAuth()
+-  @UseGuards(AuthorizationGuard)
++
++  /**
++   * Static multer options for file upload validation
++   */
++  private static getMulterOptions(maxSize: number = 5 * 1024 * 1024) {
++    const ALLOWED_EXTENSIONS = [
++      '.txt',
++      '.doc',
++      '.docx',
++      '.pdf',
++      '.ppt',
++      '.pptx',
++      '.xls',
++      '.xlsx',
++      '.jpg',
++      '.jpeg',
++      '.png',
++      '.gif',
++      '.bmp',
++      '.webp',
++      '.svg',
++    ];
++
++    return {
++      storage: multer.memoryStorage(),
++      fileFilter: (req, file, cb) => {
++        const ext = (file.originalname.match(/\.[^.]+$/) || [
++          '',
++        ])[0]?.toLowerCase();
++        if (ALLOWED_EXTENSIONS.includes(ext)) {
++          cb(null, true);
++        } else {
++          cb(new Error('File type not allowed'), false);
++        }
++      },
++      limits: { fileSize: maxSize },
++    };
++  }
++
++  @AuthenticatedOperation('Upload avatar image (converted to WebP)')
+   @Post('/avatar')
+   @ApiConsumes('multipart/form-data')
+   @ApiBody({
+@@ -55,144 +86,72 @@ export class UploadController {
+       },
+     },
+   })
+-  @ApiOperation({ summary: 'Upload avatar image' })
+-  @ApiResponse({
+-    status: 201,
+-    description: 'File uploaded and converted to webp.',
+-  })
+-  @UseInterceptors(
+-    FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
+-  )
+-  async UploadAvatarController(
+-    @UploadedFile() file: Express.Multer.File,
+-    @Req() req: Request,
+-    @Res() res: Response,
+-  ) {
+-    try {
+-      if (!file) {
+-        return res.status(400).json({
+-          message: 'no file uploaded or file size exceeds the limit!',
+-        });
+-      }
+-      // Gọi service để upload file
+-      const result = await this.uploadService.uploadAvatarService(file.buffer);
+-      res.status(201).json({
+-        message: 'File uploaded and converted to webp!',
+-        fileId: result.fileId,
+-      });
+-    } catch (error) {
+-      this.handleError(res, 'Internal server error', 500, error);
++  @UseInterceptors(FileInterceptor('file', UploadController.getMulterOptions()))
++  async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
++    if (!file) {
++      throw new BadRequestException(
++        'No file uploaded or file size exceeds the limit',
++      );
+     }
++
++    const result = await this.uploadService.uploadAvatar(file.buffer);
++    return this.successResponse({
++      message: 'Avatar uploaded and converted to WebP successfully',
++      fileId: result.fileId,
++    });
+   }
++
+   @Get('/image/:id')
+-  @ApiOperation({ summary: 'Download webp image by ID' })
+-  @ApiParam({ name: 'id', description: 'ID of the file to download' })
++  @ApiOperation({ summary: 'Download file by ID' })
++  @ApiParam({ name: 'id', description: 'File ID to download' })
+   @ApiResponse({
+     status: 200,
+-    description: 'File downloaded successfully.',
+-    content: { 'image/webp': { schema: { type: 'string', format: 'binary' } } },
++    description: 'File downloaded successfully',
++    content: {
++      'application/octet-stream': {
++        schema: { type: 'string', format: 'binary' },
++      },
++    },
+   })
+-  async DownloadFileController(@Param('id') id: string, @Res() res: Response) {
++  async downloadFile(@Param('id') id: string, @Res() res: Response) {
+     if (!ObjectId.isValid(id)) {
+-      return res.status(400).json({ message: 'Invalid file id' });
++      return res.status(400).json({ message: 'Invalid file ID' });
+     }
+-    return await this.uploadService.DownloadFileService(id, res);
++    return this.uploadService.downloadFile(id, res);
+   }
+-  @Post('image')
+-  @ApiOperation({ summary: 'Upload image with url ' })
+-  @UseInterceptors(FileInterceptor('file'))
++
++  @Post('single')
++  @ApiOperation({ summary: 'Upload single file' })
++  @UseInterceptors(FileInterceptor('file', UploadController.getMulterOptions()))
+   @ApiConsumes('multipart/form-data')
+   @ApiBody({
+     schema: {
+       type: 'object',
+       properties: {
+-        file: {
+-          type: 'string',
+-          format: 'binary',
+-        },
++        file: { type: 'string', format: 'binary' },
+       },
+     },
+   })
+-  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
+-    // console.log(file);
+-    return success(await this.uploadService.uploadFile(file, req));
+-    // return {
+-    //   filename: file.filename,
+-    //   id: file.id,
+-    // };
+-  }
+-
+-  private readonly allowedExtensions = [
+-    '.txt',
+-    '.doc',
+-    '.docx',
+-    '.pdf',
+-    '.ppt',
+-    '.pptx',
+-    '.xls',
+-    '.xlsx',
+-    '.jpg',
+-    '.jpeg',
+-    '.png',
+-    '.gif',
+-    '.bmp',
+-    '.webp',
+-    '.svg',
+-  ];
++  async uploadSingleFile(
++    @UploadedFile() file: Express.Multer.File,
++    @Req() req: any,
++  ) {
++    if (!file) {
++      throw new BadRequestException('No file uploaded');
++    }
+ 
+-  private getMultiMulterOptions() {
+-    return {
+-      storage: multer.memoryStorage(),
+-      fileFilter: (req, file, cb) => {
+-        const ext = (file.originalname.match(/\.[^.]+$/) || [
+-          '',
+-        ])[0]?.toLowerCase();
+-        if (this.allowedExtensions.includes(ext)) {
+-          cb(null, true);
+-        } else {
+-          cb(new Error('File type not allowed'), false);
+-        }
+-      },
+-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB mỗi file
+-    };
++    const result = await this.uploadService.uploadFile(file, req);
++    return this.successResponse(result);
+   }
+ 
+-  @Post('multi')
+-  @ApiOperation({
+-    summary: 'Upload nhiều file với các định dạng cho phép (lưu GridFS)',
+-  })
++  @Post('multiple')
++  @ApiOperation({ summary: 'Upload multiple files (max 10 files, 10MB each)' })
+   @UseInterceptors(
+-    FilesInterceptor('files', 10, {
+-      storage: multer.memoryStorage(),
+-      fileFilter: (req, file, cb) => {
+-        const ext = (file.originalname.match(/\.[^.]+$/) || [
+-          '',
+-        ])[0]?.toLowerCase();
+-        const allowed = [
+-          '.txt',
+-          '.doc',
+-          '.docx',
+-          '.pdf',
+-          '.ppt',
+-          '.pptx',
+-          '.xls',
+-          '.xlsx',
+-          '.jpg',
+-          '.jpeg',
+-          '.png',
+-          '.gif',
+-          '.bmp',
+-          '.webp',
+-          '.svg',
+-        ];
+-        if (allowed.includes(ext)) {
+-          cb(null, true);
+-        } else {
+-          cb(new Error('File type not allowed'), false);
+-        }
+-      },
+-      limits: { fileSize: 10 * 1024 * 1024 },
+-    }),
++    FilesInterceptor(
++      'files',
++      10,
++      UploadController.getMulterOptions(10 * 1024 * 1024),
++    ),
+   )
+   @ApiConsumes('multipart/form-data')
+   @ApiBody({
+@@ -210,6 +169,11 @@ export class UploadController {
+     @UploadedFiles() files: Express.Multer.File[],
+     @Req() req: any,
+   ) {
+-    return success(await this.uploadService.uploadMultipleFiles(files, req));
++    if (!files?.length) {
++      throw new BadRequestException('No files uploaded');
++    }
++
++    const result = await this.uploadService.uploadMultipleFiles(files, req);
++    return this.successResponse(result);
+   }
+ }
+diff --git a/src/modules/uploads/upload.service.ts b/src/modules/uploads/upload.service.ts
+index a628118..d69386b 100644
+--- a/src/modules/uploads/upload.service.ts
++++ b/src/modules/uploads/upload.service.ts
+@@ -9,149 +9,179 @@ import { GridFSBucket, ObjectId } from 'mongodb';
+ import { Readable } from 'stream';
+ import { FileResponse } from './types/file.interdace';
+ import * as mime from 'mime-types';
++import { BaseService } from '../../common/services/base.service';
+ 
++/**
++ * Upload Service với GridFS storage tối ưu
++ */
+ @Injectable()
+-export class UploadService {
++export class UploadService extends BaseService {
+   private readonly logger = new Logger(UploadService.name);
+-  // private handleError(
+-  //   res: Response,
+-  //   message: string,
+-  //   statusCode: number,
+-  //   error?: Error,
+-  // ) {
+-  //   if (error) this.logger.error(`${message}: ${error.message}`);
+-  //   res.status(statusCode).json({ message, error: error?.message });
+-  // }
++  protected collectionName = 'uploads'; // Required by BaseService but not used for GridFS
++
++  // File configuration constants
++  private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
++  private readonly MAX_BULK_FILE_SIZE = 10 * 1024 * 1024; // 10MB
++  private readonly ALLOWED_EXTENSIONS = [
++    '.txt',
++    '.doc',
++    '.docx',
++    '.pdf',
++    '.ppt',
++    '.pptx',
++    '.xls',
++    '.xlsx',
++    '.jpg',
++    '.jpeg',
++    '.png',
++    '.gif',
++    '.bmp',
++    '.webp',
++    '.svg',
++  ];
++  private readonly ALLOWED_MIME_TYPES = [
++    'text/plain',
++    'application/msword',
++    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
++    'application/pdf',
++    'application/vnd.ms-powerpoint',
++    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
++    'application/vnd.ms-excel',
++    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
++    'image/jpeg',
++    'image/png',
++    'image/gif',
++    'image/bmp',
++    'image/webp',
++    'image/svg+xml',
++  ];
++
+   constructor(
+     @Inject('MONGO_DB_CONNECTION_GridFSBucket')
+     private readonly gridFSBucket: GridFSBucket,
+-  ) {}
++  ) {
++    super(null, null); // GridFS doesn't use the standard MongoDB connection
++  }
++
++  /**
++   * Validate file before upload
++   */
++  private validateFile(file: Express.Multer.File, maxSize?: number): void {
++    const fileSize = maxSize || this.MAX_FILE_SIZE;
++    
++    if (file.size > fileSize) {
++      throw new BadRequestException(
++        `File size exceeds the maximum limit of ${fileSize / (1024 * 1024)}MB.`
++      );
++    }
++
++    const extension = this.getFileExtension(file.originalname);
++    if (!this.ALLOWED_EXTENSIONS.includes(extension)) {
++      throw new BadRequestException(`File extension "${extension}" not allowed.`);
++    }
++
++    const detectedMime = mime.lookup(extension) || file.mimetype;
++    if (!this.ALLOWED_MIME_TYPES.includes(detectedMime)) {
++      throw new BadRequestException(`MIME type "${detectedMime}" not allowed.`);
++    }
++  }
++
++  /**
++   * Get file extension from filename
++   */
++  private getFileExtension(filename: string): string {
++    return (filename.match(/\.[^.]+$/) || [''])[0]?.toLowerCase();
++  }
++
++  /**
++   * Generate file URL
++   */
++  private generateFileUrl(fileId: string, req: any, isImage = false): string {
++    const host = req.headers['host'];
++    const protocol = req.headers['x-forwarded-proto'] || 'http';
++    const endpoint = isImage ? 'image' : 'file';
++    return `${protocol}://${host}/uploads/${endpoint}/${fileId}`;
++  }
+ 
+-  async DownloadFileService(id: string, res: any) {
++  /**
++   * Download file by ID - optimized
++   */
++  async downloadFile(id: string, res: any): Promise<void> {
+     if (!ObjectId.isValid(id)) {
+-      res.status(400).json({ message: 'Invalid file id' });
++      res.status(400).json({ message: 'Invalid file ID' });
+       return;
+     }
++
+     try {
+       const objectId = new ObjectId(id);
+       const file = await this.gridFSBucket.find({ _id: objectId }).next();
+ 
+-      if (!file)
+-        throw new InternalServerErrorException({
+-          message: 'File download failed',
+-          error: 'File not found',
+-        });
++      if (!file) {
++        res.status(404).json({ message: 'File not found' });
++        return;
++      }
++
++      res.setHeader('Content-Type', file.contentType || 'application/octet-stream');
++      res.setHeader('Content-Length', file.length);
++      res.setHeader('Content-Disposition', `inline; filename="${file.filename}"`);
+ 
+-      res.setHeader('Content-Type', 'image/webp'); // Đảm bảo Content-Type là webp
+       const downloadStream = this.gridFSBucket.openDownloadStream(objectId);
++      
++      downloadStream.on('error', (error) => {
++        this.logger.error(`File download failed for ID ${id}:`, error);
++        if (!res.headersSent) {
++          res.status(500).json({ message: 'File download failed' });
++        }
++      });
+ 
+-      downloadStream.pipe(res).on(
+-        'error',
+-        (error: any) => {
+-          throw new InternalServerErrorException({
+-            message: 'File download failed',
+-            error: error,
+-          });
+-        },
+-        // this.handleError(res, 'File download failed', 404, error),
+-      );
++      downloadStream.pipe(res);
+     } catch (error) {
+-      // this.handleError(res, 'Invalid file ID', 400, error);
+-      throw new InternalServerErrorException({
+-        message: 'Invalid file ID',
+-        error: error,
+-      });
++      this.logger.error(`Error downloading file ${id}:`, error);
++      if (!res.headersSent) {
++        res.status(500).json({ message: 'Internal server error' });
++      }
+     }
+   }
+ 
+-  async uploadAvatarService(buffer: Buffer): Promise<{ fileId: string }> {
++  /**
++   * Upload avatar (converted to WebP) - optimized
++   */
++  async uploadAvatar(buffer: Buffer): Promise<{ fileId: string }> {
+     return new Promise((resolve, reject) => {
+       try {
+         const readableStream = Readable.from(buffer);
+-        const uploadStream = this.gridFSBucket.openUploadStream(
+-          `${Date.now()}.webp`,
+-          { contentType: 'image/webp' },
+-        );
++        const filename = `avatar-${Date.now()}.webp`;
++        const uploadStream = this.gridFSBucket.openUploadStream(filename, {
++          contentType: 'image/webp',
++          metadata: {
++            uploadedAt: new Date(),
++            type: 'avatar',
++          },
++        });
++
+         readableStream.pipe(uploadStream);
++
+         uploadStream.on('finish', () => {
+-          this.logger.log(`File uploaded and converted to webp.`);
++          this.logger.log(`Avatar uploaded successfully: ${filename}`);
+           resolve({ fileId: uploadStream.id.toString() });
+         });
+-        uploadStream.on('error', (error: any) => {
+-          this.logger.error('File upload failed', error);
+-          reject(
+-            new InternalServerErrorException({
+-              message: 'File upload failed',
+-              error: error?.message,
+-            }),
+-          );
++
++        uploadStream.on('error', (error) => {
++          this.logger.error('Avatar upload failed:', error);
++          reject(new InternalServerErrorException('Avatar upload failed'));
+         });
+       } catch (error) {
+-        this.logger.error('Internal server error', error);
+-        reject(
+-          new InternalServerErrorException({
+-            message: 'Internal server error',
+-            error: error?.message,
+-          }),
+-        );
++        this.logger.error('Avatar upload error:', error);
++        reject(new InternalServerErrorException('Internal server error'));
+       }
+     });
+   }
++  /**
++   * Upload single file - optimized
++   */
+   async uploadFile(file: Express.Multer.File, req: any): Promise<FileResponse> {
+-    // this.logger.log(`Uploading file: ${file.originalname}, size: ${file.size}, mimetype: ${file.mimetype}`);
+-    const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+-    if (file.size > maxSizeInBytes) {
+-      // this.logger.warn(`File too large: ${file.originalname}`);
+-      throw new BadRequestException(
+-        'File size exceeds the maximum limit of 5MB.',
+-      );
+-    }
+-    // Kiểm tra loại file dựa vào đuôi file bằng mime-types
+-    const extension = (file.originalname.match(/\.[^.]+$/) || [
+-      '',
+-    ])[0]?.toLowerCase();
+-    const allowedExtensions = [
+-      '.txt',
+-      '.doc',
+-      '.docx',
+-      '.pdf',
+-      '.ppt',
+-      '.pptx',
+-      '.xls',
+-      '.xlsx',
+-      '.jpg',
+-      '.jpeg',
+-      '.png',
+-      '.gif',
+-      '.bmp',
+-      '.webp',
+-      '.svg',
+-    ];
+-    if (!allowedExtensions.includes(extension)) {
+-      // this.logger.warn(`File extension not allowed: ${file.originalname}, ext: ${extension}`);
+-      throw new BadRequestException('File extension not allowed.');
+-    }
+-    const allowedMimeTypes = [
+-      'text/plain',
+-      'application/msword',
+-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+-      'application/pdf',
+-      'application/vnd.ms-powerpoint',
+-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+-      'application/vnd.ms-excel',
+-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+-      'image/jpeg',
+-      'image/png',
+-      'image/gif',
+-      'image/bmp',
+-      'image/webp',
+-      'image/svg+xml',
+-    ];
+-    const detectedMime = mime.lookup(extension) || file.mimetype;
+-    if (!allowedMimeTypes.includes(detectedMime)) {
+-      // this.logger.warn(`Mime type not allowed: ${file.originalname}, detected: ${detectedMime}`);
+-      throw new BadRequestException('Mime type not allowed.');
+-    }
++    this.validateFile(file);
++
+     return new Promise((resolve, reject) => {
+       const fileId = new ObjectId();
+       const writeStream = this.gridFSBucket.openUploadStreamWithId(
+@@ -159,88 +189,108 @@ export class UploadService {
+         file.originalname,
+         {
+           contentType: file.mimetype,
++          metadata: {
++            uploadedAt: new Date(),
++            size: file.size,
++            originalname: file.originalname,
++          },
+         },
+       );
++
+       writeStream.write(file.buffer);
+       writeStream.end();
++
+       writeStream.on('finish', () => {
+-        const host = req.headers['host'];
+-        const protocol = req.headers['x-forwarded-proto'] || 'http';
+-        // this.logger.log(`File uploaded: ${file.originalname}, id: ${fileId}`);
++        this.logger.log(`File uploaded: ${file.originalname} (${fileId})`);
++        const isImage = file.mimetype.startsWith('image/');
+         resolve({
+           id: fileId.toString(),
+-          url: `${protocol}://${host}/uploads/image/${fileId}`,
++          url: this.generateFileUrl(fileId.toString(), req, isImage),
+         });
+       });
++
+       writeStream.on('error', (err) => {
+-        // this.logger.error(`Error uploading file: ${file.originalname}`, err);
+-        reject(err);
++        this.logger.error(`Upload failed for ${file.originalname}:`, err);
++        reject(new InternalServerErrorException('File upload failed'));
+       });
+     });
+   }
+ 
++  /**
++   * Upload multiple files - optimized with better error handling
++   */
+   async uploadMultipleFiles(files: Express.Multer.File[], req: any) {
+-    // this.logger.log(`Uploading multiple files: ${files.map(f => f.originalname).join(', ')}`);
+-    const host = req.headers['host'];
+-    const protocol = req.headers['x-forwarded-proto'] || 'http';
+-    const concurrency = 5;
++    const concurrency = 3; // Reduced concurrency for better stability
+     const uploadResults: any[] = [];
+-    // Helper: batch upload with concurrency
+-    async function batchUpload(arr, batchSize, handler) {
+-      let idx = 0;
+-      while (idx < arr.length) {
+-        const batch = arr.slice(idx, idx + batchSize);
+-        const results = await Promise.all(batch.map(handler));
+-        uploadResults.push(...results);
+-        idx += batchSize;
+-      }
+-    }
++
++    // Process files in batches
++    const processBatch = async (batch: Express.Multer.File[]) => {
++      return Promise.allSettled(
++        batch.map(async (file) => {
++          try {
++            // Validate file before upload
++            this.validateFile(file, this.MAX_BULK_FILE_SIZE);
++            
++            const result = await this.uploadFile(file, req);
++            const extension = this.getFileExtension(file.originalname);
++            const isImage = file.mimetype.startsWith('image/');
++
++            return {
++              success: true,
++              id: result.id,
++              originalname: file.originalname,
++              mimetype: file.mimetype,
++              size: file.size,
++              extension,
++              isImage,
++              url: result.url,
++              error: null,
++            };
++          } catch (error) {
++            this.logger.error(`Failed to upload ${file.originalname}:`, error);
++            return {
++              success: false,
++              id: null,
++              originalname: file.originalname,
++              mimetype: file.mimetype,
++              size: file.size,
++              extension: this.getFileExtension(file.originalname),
++              isImage: file.mimetype.startsWith('image/'),
++              url: null,
++              error: error.message || 'Upload failed',
++            };
++          }
++        }),
++      );
++    };
++
+     try {
+-      await batchUpload(files, concurrency, async (file) => {
+-        try {
+-          const result = await this.uploadFile(file, req);
+-          const isImage = file.mimetype.startsWith('image/');
+-          const extension = (file.originalname.match(/\.[^.]+$/) || [
+-            '',
+-          ])[0]?.toLowerCase();
+-          return {
+-            id: result.id,
+-            originalname: file.originalname,
+-            mimetype: file.mimetype,
+-            size: file.size,
+-            extension,
+-            isImage,
+-            url: isImage
+-              ? `${protocol}://${host}/uploads/image/${result.id}`
+-              : undefined,
+-            error: null,
+-          };
+-        } catch (err) {
+-          // this.logger.error(`Failed to upload file: ${file.originalname}`, err);
+-          return {
+-            id: null,
+-            originalname: file.originalname,
+-            mimetype: file.mimetype,
+-            size: file.size,
+-            extension: (file.originalname.match(/\.[^.]+$/) || [
+-              '',
+-            ])[0]?.toLowerCase(),
+-            isImage: file.mimetype.startsWith('image/'),
+-            url: undefined,
+-            error: err?.message || 'Unknown error',
+-          };
+-        }
+-      });
+-      // this.logger.log('Upload results:', JSON.stringify(uploadResults, null, 2));
++      // Process files in batches with concurrency control
++      for (let i = 0; i < files.length; i += concurrency) {
++        const batch = files.slice(i, i + concurrency);
++        const batchResults = await processBatch(batch);
++        
++        batchResults.forEach((result) => {
++          uploadResults.push(result.status === 'fulfilled' ? result.value : {
++            success: false,
++            error: result.reason?.message || 'Unknown error',
++          });
++        });
++      }
++
++      const successful = uploadResults.filter(r => r.success).length;
++      const failed = uploadResults.length - successful;
++
++      this.logger.log(`Batch upload completed: ${successful} successful, ${failed} failed`);
++
+       return {
+-        message: 'Upload thành công',
++        message: `Upload completed: ${successful}/${uploadResults.length} files successful`,
++        summary: { total: uploadResults.length, successful, failed },
+         files: uploadResults,
+       };
+-    } catch (err) {
+-      this.logger.error('Critical error in uploadMultipleFiles', err);
+-      throw new InternalServerErrorException(
+-        err?.message || 'Internal server error',
+-      );
++    } catch (error) {
++      this.logger.error('Critical error in batch upload:', error);
++      throw new InternalServerErrorException('Batch upload failed');
+     }
+   }
+ }
+-- 
+2.50.0.windows.1
+
