@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggerMiddleware } from './common/middleware/logger/logger.middleware';
 import { MongoDBModule } from './databases/mongodb.module';
 import { ConfigModule } from '@nestjs/config';
@@ -16,11 +17,20 @@ import { MutipleAuthModule } from './modules/mutiple-auth/mutiple-auth.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { DriveModule } from './modules/drive/drive.module';
+import { PerformanceModule } from './modules/performance/performance.module';
+
+// Performance & Optimization Services
+import { DatabaseIndexService } from './common/services/database-index.service';
+import { PerformanceMonitoringService } from './common/services/performance-monitoring.service';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { ResponseOptimizationInterceptor } from './common/interceptors/response-optimization.interceptor';
+import { PaginationService } from './common/pagination/pagination.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       envFilePath: ['.env', '.env.development', '.env.production'],
+      isGlobal: true,
     }),
     MutipleAuthModule,
     AuthModule,
@@ -41,8 +51,27 @@ import { DriveModule } from './modules/drive/drive.module';
     FolderModule,
     DriveModule,
     CategoriesModule,
+    PerformanceModule,
   ],
-  // Không export PaginationService vì không nằm trong providers của AppModule
+  providers: [
+    // Global services
+    PaginationService,
+    DatabaseIndexService,
+    PerformanceMonitoringService,
+    
+    // Global exception filter
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    
+    // Global response optimization interceptor
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseOptimizationInterceptor,
+    },
+  ],
+  exports: [PaginationService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
