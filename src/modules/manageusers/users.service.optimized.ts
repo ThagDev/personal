@@ -3,8 +3,9 @@ import { BaseService } from '../../common/services/base.service';
 import { PaginationService } from '../../common/pagination/pagination.service';
 import { MailService } from '../mail/mail.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserWithRolesDto } from './dto/create-user-with-roles.dto';
-import { Db } from 'mongodb';
+import { Db, ObjectId } from 'mongodb';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -20,10 +21,9 @@ export class UsersService extends BaseService {
   }
 
   async createUserService(createUserDto: CreateUserDto) {
-    const existing = await this.db
-      .collection('users')
+    const existing = await this.db.collection('users')
       .findOne({ email: createUserDto.email });
-
+    
     if (existing) {
       throw new ConflictException('Email already exists');
     }
@@ -52,13 +52,12 @@ export class UsersService extends BaseService {
 
     // Send email with temp password (implement in mail service)
     // await this.mailService.sendWelcomeEmail(user.email, tempPassword);
-
+    
     return { ...user, tempPassword }; // Return temp password for now
   }
 
   private generateRandomPassword(length: number = 12): string {
-    const chars =
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
     let password = '';
     for (let i = 0; i < length; i++) {
       password += chars.charAt(Math.floor(Math.random() * chars.length));

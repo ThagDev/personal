@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Param, Put, Post } from '@nestjs/common';
+import { Body, Controller, Param, Put, Post } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { RolesPolicyService } from './roles.policy.service';
 import { success } from '../../common/response/base-response';
@@ -39,9 +39,7 @@ export class RolesPolicyController {
   }
 
   @Post('assign-permissions')
-  assignPermissionsToPolicyPost(
-    @Body() assignPermissionsDto: any,
-  ) {
+  assignPermissionsToPolicyPost(@Body() assignPermissionsDto: any) {
     const data = this.rolesPolicyService.assignPermissionsToPolicy(
       assignPermissionsDto.id,
       assignPermissionsDto.permissions,

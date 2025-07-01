@@ -5,8 +5,8 @@ import {
   ApiOperation,
   ApiQuery,
 } from '@nestjs/swagger';
-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
-import { CurrentUserId } from 'src/common/decorators/current-user.decorator';
+import { AuthorizationGuard } from '../../common/middleware/authorization.guard';
+import { CurrentUserId } from '../../common/decorators/current-user.decorator';
 import { DriveService } from './drive.service';
 import { success } from '../../common/response/base-response';
 

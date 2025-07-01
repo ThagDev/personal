@@ -1,7 +1,7 @@
 import {
   Controller,
   Get,
-  Patch,
+  Put,
   Req,
   Body,
   Post,
@@ -9,53 +9,47 @@ import {
   UploadedFile,
   Param,
   Res,
-  UseGuards,
-  Put,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
+  ApiTags,
   ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiParam,
-  ApiResponse,
-  ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ProfileService } from './profile.service';
-import { AuthorizationGuard } from 'src/common/middleware/authorization.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ObjectId } from 'mongodb';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { CurrentUserEmail } from 'src/common/decorators/current-user.decorator';
-import { success } from '../../common/response/base-response';
+import { BaseController } from '../../common/response/base-controller';
+import { AuthenticatedOperation } from '../../common/decorators/api.decorator';
 
 @ApiTags('Profile')
-@ApiBearerAuth()
 @Controller('profile')
-export class ProfileController {
-  constructor(private readonly profileService: ProfileService) {}
-  @UseGuards(AuthorizationGuard)
+export class ProfileController extends BaseController {
+  constructor(private readonly profileService: ProfileService) {
+    super();
+  }
+
+  @AuthenticatedOperation('Get current user profile')
   @Get('me')
-  @ApiOperation({ summary: 'Get current user profile' })
   async getMe(@CurrentUserEmail() email: string) {
     const data = await this.profileService.getMe(email);
-    return success(data);
+    return this.successResponse(data);
   }
-  @UseGuards(AuthorizationGuard)
+
+  @AuthenticatedOperation('Update current user profile')
   @Put('me')
-  @ApiOperation({ summary: 'Update current user profile' })
-  @ApiBody({
-    type: CreateProfileDto,
-  })
-  @UseGuards(AuthorizationGuard)
+  @ApiBody({ type: CreateProfileDto })
   async updateMe(@CurrentUserEmail() email: string, @Body() updateProfileDto: CreateProfileDto) {
     const data = await this.profileService.updateMe(email, updateProfileDto);
-    return success(data);
+    return this.successResponse(data);
   }
-  @UseGuards(AuthorizationGuard)
+
+  @AuthenticatedOperation('Change password')
   @Post('change-password')
-  @ApiOperation({ summary: 'Change password' })
   @ApiBody({
     schema: {
       properties: {
@@ -73,7 +67,7 @@ export class ProfileController {
       body.oldPassword,
       body.newPassword,
     );
-    return success(data);
+    return this.successResponse(data);
   }
 
   @Post('forgot-password')
@@ -82,20 +76,24 @@ export class ProfileController {
   async forgotPassword(@Body() body: { email: string }) {
     return this.profileService.forgotPassword(body.email);
   }
+
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password with token' })
-  @ApiBody({ schema: { properties: { token: { type: 'string' }, newPassword: { type: 'string' } } } })
+  @ApiBody({ 
+    schema: { 
+      properties: { 
+        token: { type: 'string' }, 
+        newPassword: { type: 'string' } 
+      } 
+    } 
+  })
   async resetPassword(@Body() body: { token: string; newPassword: string }) {
     return this.profileService.resetPassword(body.token, body.newPassword);
   }
-  @UseGuards(AuthorizationGuard)
+
+  @AuthenticatedOperation('Update and change avatar')
   @Post('avatar')
-  @ApiOperation({ summary: 'update and change avatar' })
-  @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  // @UseInterceptors(
-  //   FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }),
-  // )
   @ApiBody({
     schema: {
       type: 'object',
@@ -107,6 +105,7 @@ export class ProfileController {
       },
     },
   })
+  @UseInterceptors(FileInterceptor('file'))
   async updateAvatar(
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
@@ -114,14 +113,9 @@ export class ProfileController {
     return this.profileService.updateAvatar(file, req);
   }
 
-  @Get('/avatar/:id')
-  @ApiOperation({ summary: 'Download avatar image by ID' })
-  @ApiParam({ name: 'id', description: 'ID of the avatar to download' })
-  @ApiResponse({
-    status: 200,
-    description: 'File downloaded successfully.',
-    content: { 'image/webp': { schema: { type: 'string', format: 'binary' } } },
-  })
+  @Get('avatar/:id')
+  @ApiOperation({ summary: 'Download avatar by ID' })
+  @ApiParam({ name: 'id', description: 'Avatar file ID' })
   async DownloadFileController(@Param('id') id: string, @Res() res: Response) {
     if (!ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid file id' });
